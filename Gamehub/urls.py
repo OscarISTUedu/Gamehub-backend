@@ -21,6 +21,4 @@ urlpatterns = [
     # JWT токены
     path('token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('token/verify/', TokenVerifyView.as_view(), name='token_verify'),
-
-    path('test/auth', AuthTest.as_view(), name='auth_test'),
 ]

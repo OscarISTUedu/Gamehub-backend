@@ -1,16 +1,17 @@
 from rest_framework import status, permissions
-from rest_framework.generics import GenericAPIView
+from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.utils import extend_schema
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.generics import RetrieveAPIView
 
 from Gamehub import settings
 from .models import User
-from .serializers import (RegisterSerializer, LoginSerializer, CustomTokenObtainPairSerializer)
+from .serializers import (RegisterSerializer, LoginSerializer, CustomTokenObtainPairSerializer,
+                          UserAchievementSerializer, AchievementListSerializer)
 
 
 
@@ -134,3 +135,27 @@ class AuthTest(APIView):
         data = {"status": "authorized"}
         response = Response(data)
         return response
+
+
+class GetMyEmailView(APIView):
+    def get(self, request):
+        content = {
+            'email': request.user.email,
+        }
+        return Response(content)
+
+class GetMyRegistrationDateView(APIView):
+    def get(self, request):
+        content = {
+            'created_at': request.user.created_at,
+        }
+        return Response(content)
+
+class GetMyAchievementsView(RetrieveAPIView):
+    serializer_class = UserAchievementSerializer
+    def get_object(self):
+        return self.request.user
+
+class GetAllAchievementsView(ListAPIView):
+    serializer_class = AchievementListSerializer
+

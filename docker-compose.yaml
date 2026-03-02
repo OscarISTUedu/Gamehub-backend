@@ -1,9 +1,10 @@
 version: '3.8'
 
 services:
+
   db:
     image: postgres:17-alpine
-    container_name: django_db_prod
+    container_name: gamehub_db
     restart: always
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data/
@@ -12,7 +13,19 @@ services:
     environment:
       - TZ=UTC
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U django_gamehub_user -d django_gamegub_db"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - django_network_prod
+
+  redis:
+    image: redis:7-alpine
+    container_name: gamehub_redis
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -23,15 +36,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: django_backend_prod
+    container_name: gamehub_backend
     restart: always
-    command: sh -c "python manage.py makemigrations --noinput && python manage.py migrate --noinput && daphne Gamehub.asgi:application --bind 0.0.0.0 --port 8000"
     env_file:
       - .env
     ports:
       - "8000:8000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - django_network_prod

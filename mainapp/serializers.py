@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, Achievement
+from .models import User, Achievement, GameLobby
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Сериализатор для регистрации"""
@@ -107,3 +107,25 @@ class AchievementListSerializer(serializers.ModelSerializer):
         model = Achievement
         fields = ['name', 'description', 'image', 'game_id']
         list_serializer_class = serializers.ListSerializer
+
+class GameLobbySerializer(serializers.ModelSerializer):
+    lobby_owner_email = serializers.EmailField(source='lobby_owner.email', read_only=True)
+    opponent_email = serializers.EmailField(source='opponent.email', read_only=True)
+    is_my_turn = serializers.SerializerMethodField()
+    my_symbol = serializers.SerializerMethodField()
+
+    class Meta:
+        model = GameLobby
+        fields = [
+            'game_id', 'lobby_owner_email', 'opponent_email',
+            'board', 'turn', 'status', 'winner', 'is_my_turn', 'my_symbol'
+        ]
+        read_only_fields = ['game_id', 'status', 'winner']
+
+    def get_is_my_turn(self, obj):
+        request = self.context.get('request')
+        return request and request.user and obj.is_my_turn(request.user)
+
+    def get_my_symbol(self, obj):
+        request = self.context.get('request')
+        return obj.get_player_symbol(request.user) if request and request.user else None

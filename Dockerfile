@@ -17,6 +17,9 @@ RUN pip install --no-cache-dir -r req.txt
 
 COPY . .
 
+# Удаляем старую проблемную миграцию если вдруг осталась
+RUN rm -f /app/mainapp/migrations/0002_gamelobby_board_size_win_length.py
+
 CMD ["sh", "-c", \
     "python manage.py migrate --fake-initial --noinput && \
      daphne -b 0.0.0.0 -p 8000 Gamehub.asgi:application"]

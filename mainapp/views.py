@@ -1,6 +1,10 @@
 import time
+from datetime import timedelta
+from datetime import timedelta
+from django.utils import timezone
 from django.db.models import Q
 from rest_framework import status, permissions
+from django.utils import timezone
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -215,6 +219,7 @@ class GameStartView(APIView):
                 "win_length": existing.win_length,
                 "is_your_turn": existing.turn == user_id,
                 "is_owner": existing.lobby_owner == user_id,
+                "my_symbol": "X" if existing.lobby_owner == user_id else "O",
                 "opponent": opponent_data,
             })
 
@@ -230,6 +235,7 @@ class GameStartView(APIView):
             # Присоединяемся
             open_lobby.opponent = user_id
             open_lobby.turn = open_lobby.lobby_owner
+            open_lobby.turn_deadline = timezone.now() + timedelta(seconds=120)
             open_lobby.save()
 
             try:
@@ -246,6 +252,7 @@ class GameStartView(APIView):
                 "map": open_lobby.map,
                 "board_size": open_lobby.board_size,
                 "win_length": open_lobby.win_length,
+                "my_symbol": "X",
             })
 
             return Response({
@@ -256,6 +263,8 @@ class GameStartView(APIView):
                 "win_length": open_lobby.win_length,
                 "is_your_turn": False,
                 "is_owner": False,
+                "my_symbol": "O",
+                "turn_started_at": int(open_lobby.updated_at.timestamp()),
                 "opponent": owner_data,
             })
 
@@ -326,8 +335,10 @@ class MakeTurnView(APIView):
 
         if not game_over:
             lobby.turn = other_id
+            lobby.turn_deadline = timezone.now() + timedelta(seconds=120)
         else:
             lobby.turn = None
+            lobby.turn_deadline = None
 
         lobby.save()
 

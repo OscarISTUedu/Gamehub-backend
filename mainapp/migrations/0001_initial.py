@@ -79,6 +79,7 @@ class Migration(migrations.Migration):
                 ('winner', models.IntegerField(blank=True, null=True)),
                 ('board_size', models.IntegerField(default=3)),
                 ('win_length', models.IntegerField(default=3)),
+                ('turn_deadline', models.DateTimeField(blank=True, null=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
             ],

@@ -48,6 +48,12 @@ class GameLobby(models.Model):
     board_size = models.IntegerField(default=3)   # Размер поля (3-10)
     win_length = models.IntegerField(default=3)   # Сколько в ряд для победы
 
+    # Дедлайн текущего хода (автопроигрыш по таймауту)
+    turn_deadline = models.DateTimeField(null=True, blank=True)
+
+    # Таймаут хода (null = игра не началась или закончена)
+    turn_deadline = models.DateTimeField(null=True, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

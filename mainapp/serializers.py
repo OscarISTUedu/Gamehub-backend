@@ -11,6 +11,11 @@ class RegisterSerializer(serializers.ModelSerializer):
         required=True,
         validators=[UniqueValidator(queryset=User.objects.all())]
     )
+    username = serializers.CharField(
+        required=True,
+        allow_blank=False,
+        max_length=20
+    )
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -18,11 +23,12 @@ class RegisterSerializer(serializers.ModelSerializer):
     )
     class Meta:
         model = User
-        fields = ('email', 'password')
+        fields = ('email', 'username', 'password')
 
     def create(self, validated_data):
         user = User.objects.create(
             email=validated_data['email'],
+            username=validated_data['username'],
         )
         user.set_password(validated_data['password'])
         user.save()
@@ -55,7 +61,7 @@ class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для профиля пользователя"""
     class Meta:
         model = User
-        fields = ('id', 'email', 'avatar', 'created_at', 'updated_at')
+        fields = ('id', 'email', 'username', 'avatar', 'created_at', 'updated_at')
         read_only_fields = ('id', 'created_at', 'updated_at')
 
 
@@ -65,7 +71,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def get_token(cls, user):
         token = super().get_token(user)
         # Добавляем кастомные поля в токен
-        token['email'] = user.email
+        token['username'] = user.username
         return token
 
     def validate(self, attrs):
@@ -73,7 +79,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # Добавляем дополнительные данные в ответ
         data['user'] = {
             'id': self.user.id,
-            'email': self.user.email,
+            'username': self.user.username,
         }
         return data
 

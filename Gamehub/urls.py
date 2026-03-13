@@ -11,7 +11,7 @@ from mainapp.views import CookieTokenRefreshView, \
     GetMyAchievementsView, GetAllAchievementsView, UserTextViews, UserAvatarView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path('api/admin/', admin.site.urls),
     # API schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Swagger UI

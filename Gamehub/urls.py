@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView
 )
+from django.contrib import admin
 from mainapp import views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
@@ -10,6 +11,7 @@ from mainapp.views import CookieTokenRefreshView, \
     GetMyAchievementsView, GetAllAchievementsView, UserTextViews, UserAvatarView
 
 urlpatterns = [
+    path('admin/', admin.site.urls),
     # API schema
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     # Swagger UI

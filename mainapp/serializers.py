@@ -3,7 +3,8 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework.validators import UniqueValidator
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
-from .models import User, Achievement
+from .models import User, Achievement, Game
+
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Сериализатор для регистрации"""
@@ -106,27 +107,31 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class AchievementSerializer(serializers.ModelSerializer):
+    game = serializers.SerializerMethodField()
     class Meta:
         model = Achievement
-        fields = ['name', 'description', 'image', 'game_id']
+        fields = ['name', 'description', 'image', 'game']
         read_only_fields = ['id']
+
+    def get_game(self, obj):
+        try:
+            game = Game.objects.only('name').get(id=obj.game_id)
+            return game.name
+        except Game.DoesNotExist:
+            return None
 
 
 class UserAchievementSerializer(serializers.ModelSerializer):
     achievements = serializers.SerializerMethodField()
-    achievements_count = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ['achievements', 'achievements_count']
+        fields = ['achievements']
 
     def get_achievements(self, obj):
         if not obj.achievements:
             return []
         achievements = Achievement.objects.filter(id__in=obj.achievements)
         return AchievementSerializer(achievements, many=True).data
-
-    def get_achievements_count(self, obj):
-        return len(obj.achievements) if obj.achievements else 0
 
 
 class AchievementListSerializer(serializers.ModelSerializer):

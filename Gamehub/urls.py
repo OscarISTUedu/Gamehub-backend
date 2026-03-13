@@ -7,7 +7,7 @@ from mainapp import views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 from mainapp.views import CookieTokenRefreshView, \
-    GetMyAchievementsView, UserViews, GetAllAchievementsView
+    GetMyAchievementsView, GetAllAchievementsView, UserTextViews, UserAvatarView
 
 urlpatterns = [
     # API schema
@@ -23,7 +23,8 @@ urlpatterns = [
     path('api/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     # Info
-    path('api/me/all/', UserViews.as_view(), name='get_my_user'),
+    path('api/me/all/', UserTextViews.as_view(), name='my_user'),
+    path('api/me/avatar/', UserAvatarView.as_view(), name='my_avatar'),
     path('api/me/achievements/', GetMyAchievementsView.as_view(), name='get_my_achievements'),
     # Achievements
     # path('api/achievement/get_all/', GetAllAchievementsView.as_view(), name='get_all_achievements'),

@@ -1,4 +1,4 @@
-from rest_framework import status, permissions, generics
+from rest_framework import status, permissions, generics, mixins
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,8 +11,11 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from Gamehub import settings
 from .models import User
 from .serializers import (RegisterSerializer, LoginSerializer, CustomTokenObtainPairSerializer,
-                          UserAchievementSerializer, AchievementListSerializer, UserSerializer)
-
+                          UserAchievementSerializer, AchievementListSerializer, UserTextDataSerializer,
+                          UserAvatarSerializer)
+from django.http import FileResponse, Http404
+import mimetypes
+import os
 
 
 class RegisterView(GenericAPIView):
@@ -150,10 +153,79 @@ class GetAllAchievementsView(ListAPIView):
     serializer_class = AchievementListSerializer
 
 
-class UserViews(generics.RetrieveUpdateAPIView):
+class UserTextViews(generics.RetrieveUpdateAPIView):
     """GET и PATCH для текущего пользователя"""
-    serializer_class = UserSerializer
+    serializer_class = UserTextDataSerializer
     http_method_names = ['get', 'patch']
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     def get_object(self):
         return self.request.user
+
+
+class UserAvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
+    """
+    View для работы с аватаркой пользователя
+    GET: получить сам файл изображения (FileResponse)
+    POST: загрузить новую аватарку
+    """
+    serializer_class = UserAvatarSerializer
+    http_method_names = ['get', 'post']
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_object(self):
+        return self.request.user
+
+    def get(self, request, *args, **kwargs):
+        """Получить файл аватарки"""
+        user = self.get_object()
+        print(f"user.username={user.username}, user.avatar={user.avatar}")
+        if not user.avatar:
+            raise Http404("Аватар не найден")
+
+        try:
+            # Открываем файл и возвращаем его
+            image_file = user.avatar.open('rb')
+
+            # Определяем content type
+            content_type, _ = mimetypes.guess_type(user.avatar.name)
+            if not content_type:
+                content_type = 'application/octet-stream'
+
+            # Возвращаем файл
+            return FileResponse(
+                image_file,
+                content_type=content_type,
+                as_attachment=False,  # False для отображения в браузере
+                filename=os.path.basename(user.avatar.name)
+            )
+        except Exception as e:
+            raise Http404(f"Ошибка при загрузке аватара: {str(e)}")
+
+    def post(self, request, *args, **kwargs):
+        """Загрузить новую аватарку"""
+        return self.update(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        """Обновить аватарку"""
+        partial = kwargs.pop('partial', False)
+        user = self.get_object()
+        serializer = self.get_serializer(user, data=request.data, partial=partial)
+
+        if serializer.is_valid():
+            # Удаляем старую аватарку если она была
+            if user.avatar and 'avatar' in request.FILES:
+                user.avatar.delete(save=False)
+
+            self.perform_update(serializer)
+
+            # Возвращаем обновленные данные
+            response_data = serializer.data
+            if user.avatar:
+                response_data['avatar_url'] = request.build_absolute_uri(user.avatar.url)
+
+            return Response(response_data)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def perform_update(self, serializer):
+        serializer.save()

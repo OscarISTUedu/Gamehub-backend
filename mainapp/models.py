@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 from django.contrib.auth.models import AbstractUser
@@ -8,8 +6,7 @@ from django.contrib.postgres.fields import ArrayField
 def user_avatar_path(instance, filename):
     # Генерирует путь: user_avatars/user_{id}/avatar_{timestamp}.ext
     ext = filename.split('.')[-1]
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    return f'user_avatars/user_{instance.id}/avatar_{timestamp}.{ext}'
+    return f'user_avatars/user_{instance.id}/avatar.{ext}'
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):

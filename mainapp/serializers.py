@@ -61,8 +61,15 @@ class UserSerializer(serializers.ModelSerializer):
     """Сериализатор для профиля пользователя"""
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'avatar', 'created_at', 'updated_at')
-        read_only_fields = ('id', 'created_at', 'updated_at')
+        fields = ('id', 'email', 'username', 'avatar', 'created_at', 'updated_at', 'description')
+        read_only_fields = ('id', 'created_at', 'updated_at', 'email', 'password')
+
+    def update(self, instance, validated_data):
+         # Обновляем поля
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        return instance
 
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):

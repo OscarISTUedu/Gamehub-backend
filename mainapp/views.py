@@ -1,4 +1,4 @@
-from rest_framework import status, permissions
+from rest_framework import status, permissions, generics
 from rest_framework.generics import GenericAPIView, ListAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -7,11 +7,11 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveAPIView
-
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from Gamehub import settings
 from .models import User
 from .serializers import (RegisterSerializer, LoginSerializer, CustomTokenObtainPairSerializer,
-                          UserAchievementSerializer, AchievementListSerializer)
+                          UserAchievementSerializer, AchievementListSerializer, UserSerializer)
 
 
 
@@ -70,7 +70,6 @@ class LoginView(GenericAPIView):
 
 class LogoutView(GenericAPIView):
     """Выход из системы (блокировка refresh токена)"""
-    permission_classes = [permissions.IsAuthenticated]
     @extend_schema(request=None, responses=None)
     def post(self, request):
         refresh_token = request.COOKIES.get(settings.SIMPLE_JWT["AUTH_COOKIE"])
@@ -128,15 +127,6 @@ class CookieTokenRefreshView(TokenRefreshView):
                 response.data.pop('refresh')
         return response
 
-
-class AuthTest(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-    def post(self, request):
-        data = {"status": "authorized"}
-        response = Response(data)
-        return response
-
-
 class GetMyEmailView(APIView):
     def get(self, request):
         content = {
@@ -159,3 +149,11 @@ class GetMyAchievementsView(RetrieveAPIView):
 class GetAllAchievementsView(ListAPIView):
     serializer_class = AchievementListSerializer
 
+
+class UserViews(generics.RetrieveUpdateAPIView):
+    """GET и PATCH для текущего пользователя"""
+    serializer_class = UserSerializer
+    http_method_names = ['get', 'patch']
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+    def get_object(self):
+        return self.request.user

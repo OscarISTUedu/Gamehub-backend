@@ -1,7 +1,15 @@
+from datetime import datetime
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.postgres.fields import ArrayField
+
+def user_avatar_path(instance, filename):
+    # Генерирует путь: user_avatars/user_{id}/avatar_{timestamp}.ext
+    ext = filename.split('.')[-1]
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    return f'user_avatars/user_{instance.id}/avatar_{timestamp}.{ext}'
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
@@ -29,6 +37,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     avatar = models.ImageField(upload_to=user_avatar_path, null=True, blank=True)
     achievements = ArrayField(models.IntegerField(), null=True, blank=True)
+    description = models.CharField(max_length=200, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     USERNAME_FIELD = 'email'

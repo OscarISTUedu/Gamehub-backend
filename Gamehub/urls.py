@@ -6,8 +6,8 @@ from rest_framework_simplejwt.views import (
 from mainapp import views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
-from mainapp.views import AuthTest, CookieTokenRefreshView, GetMyEmailView, GetMyRegistrationDateView, \
-    GetMyAchievementsView, GetAllAchievementsView
+from mainapp.views import CookieTokenRefreshView, \
+    GetMyAchievementsView, UserViews, GetAllAchievementsView
 
 urlpatterns = [
     # API schema
@@ -23,10 +23,9 @@ urlpatterns = [
     path('api/token/refresh/', CookieTokenRefreshView.as_view(), name='token_refresh'),
     path('api/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
     # Info
-    path('api/info/me/email/', GetMyEmailView.as_view(), name='get_my_email'),
-    path('api/info/me/reg_date/', GetMyRegistrationDateView.as_view(), name='get_my_reg_date'),
-    path('api/info/me/achievements/', GetMyAchievementsView.as_view(), name='get_my_achievements'),
-    # Set
+    path('api/me/all/', UserViews.as_view(), name='get_my_user'),
+    path('api/me/achievements/', GetMyAchievementsView.as_view(), name='get_my_achievements'),
+    # Achievements
     # path('api/achievement/get_all/', GetAllAchievementsView.as_view(), name='get_all_achievements'),
 
 ]

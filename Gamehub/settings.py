@@ -26,8 +26,8 @@ SECRET_KEY = os.getenv("SECRET_KEY", default="django-insecure-e-)6&=p*$m%t_!w&k9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
-
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '91.132.58.57']
+#ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -75,7 +75,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Gamehub.wsgi.application'
 
-
+#CORS_ALLOW_ALL_ORIGINS = True
+#CORS_ALLOW_CREDENTIALS = True
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 

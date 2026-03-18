@@ -139,3 +139,9 @@ class AchievementListSerializer(serializers.ModelSerializer):
         model = Achievement
         fields = ['name', 'description', 'image', 'game_id']
         list_serializer_class = serializers.ListSerializer
+
+
+class GameSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Game
+        fields = ['name', 'description', 'picture']

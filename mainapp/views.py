@@ -9,10 +9,10 @@ from drf_spectacular.utils import extend_schema
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from Gamehub import settings
-from .models import User
+from .models import User, Game
 from .serializers import (RegisterSerializer, LoginSerializer, CustomTokenObtainPairSerializer,
                           UserAchievementSerializer, AchievementListSerializer, UserTextDataSerializer,
-                          UserAvatarSerializer)
+                          UserAvatarSerializer, GameSerializer)
 from django.http import FileResponse, Http404
 import mimetypes
 import os
@@ -229,3 +229,8 @@ class UserAvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
 
     def perform_update(self, serializer):
         serializer.save()
+
+
+class GameListView(generics.ListAPIView):
+    queryset = Game.objects.all()
+    serializer_class = GameSerializer

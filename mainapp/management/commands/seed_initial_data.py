@@ -52,7 +52,7 @@ class Command(BaseCommand):
                 }
             )
             image_filename = f"{game_data['name']}.png"
-            image_relative_path = os.path.join('game_icons', image_filename)
+            image_relative_path = os.path.join('static/img/game_icons', image_filename)
             game.picture = image_relative_path
             game.save()
             games[game_data["name"]] = game

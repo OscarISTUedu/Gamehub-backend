@@ -49,13 +49,13 @@ class User(AbstractUser):
 class Achievement(models.Model):
     name = models.TextField(max_length=100)
     description = models.TextField(max_length=500)
-    image = models.ImageField(upload_to='achive_icons/')
+    image = models.CharField(max_length=200)
     game_id = models.IntegerField()
 
 class Game(models.Model):
     name = models.TextField(max_length=100)
     description = models.TextField(max_length=500)
-    picture = models.ImageField(upload_to='game_icons/')
+    picture = models.CharField(max_length=200)
 
 class UserGameStats(models.Model):
     user_id = models.IntegerField()

@@ -28,6 +28,8 @@ services:
     command: sh -c "python manage.py makemigrations --noinput && python manage.py migrate --noinput && python manage.py seed_initial_data && daphne Gamehub.asgi:application --bind 0.0.0.0 --port 8000"
     env_file:
       - .env
+    volumes:
+      - ./static:/app/static
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

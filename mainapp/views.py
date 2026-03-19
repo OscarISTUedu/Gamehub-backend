@@ -143,6 +143,7 @@ def _broadcast_group(group_name: str, message: dict):
     async_to_sync(channel_layer.group_send)(group_name, message)
 
 
+
 def _check_win(board: list, player_id: int, win_length: int) -> bool:
     """Проверить победу на доске произвольного размера."""
     size = len(board)
@@ -202,7 +203,15 @@ class GameStartView(APIView):
             Q(lobby_owner=user_id) | Q(opponent=user_id)
         ).first()
 
-        if existing:
+        # Удаляем завершённые лобби где я участник
+        GameLobby.objects.filter(
+            game_id=GAME_ID_TICTACTOE
+        ).filter(
+            Q(lobby_owner=user_id) | Q(opponent=user_id),
+            winner__isnull=False,
+        ).delete()
+
+        if existing and existing.winner is None:
             other_id = existing.opponent if existing.lobby_owner == user_id else existing.lobby_owner
             opponent_data = None
             if other_id:
@@ -211,16 +220,22 @@ class GameStartView(APIView):
                     opponent_data = {"id": opp.id, "email": opp.email}
                 except User.DoesNotExist:
                     pass
+
+            turn_deadline_ts = None
+            if existing.turn_deadline:
+                turn_deadline_ts = int(existing.turn_deadline.timestamp())
+
             return Response({
-                "status": "rejoined",
-                "lobby_id": existing.id,
-                "map": existing.map,
-                "board_size": existing.board_size,
-                "win_length": existing.win_length,
-                "is_your_turn": existing.turn == user_id,
-                "is_owner": existing.lobby_owner == user_id,
-                "my_symbol": "X" if existing.lobby_owner == user_id else "O",
-                "opponent": opponent_data,
+                "status":        "rejoined",
+                "lobby_id":      existing.id,
+                "map":           existing.map,
+                "board_size":    existing.board_size,
+                "win_length":    existing.win_length,
+                "is_your_turn":  existing.turn == user_id,
+                "is_owner":      existing.lobby_owner == user_id,
+                "my_symbol":     "X" if existing.lobby_owner == user_id else "O",
+                "opponent":      opponent_data,
+                "turn_deadline": turn_deadline_ts,
             })
 
         # Шаг 3: Поиск открытого лобби с совпадающими настройками
@@ -314,6 +329,29 @@ class MakeTurnView(APIView):
         if lobby.turn != user.id:
             return Response({"error": "Сейчас не ваш ход"}, status=403)
 
+        # ── Проверка дедлайна ─────────────────────────────────────────────────
+        if lobby.turn_deadline and timezone.now() > lobby.turn_deadline:
+            # Время истекло — засчитываем поражение текущему игроку
+            winner_id = (
+                lobby.opponent if lobby.lobby_owner == user.id else lobby.lobby_owner
+            )
+            lobby.winner = winner_id
+            lobby.turn = None
+            lobby.turn_deadline = None
+            lobby.save()
+
+            group_name = f"tictactoe_lobby_{lobby_id}"
+            _broadcast_group(group_name, {
+                "type":   "game_ended",
+                "winner": winner_id,
+                "map":    lobby.map,
+                "reason": "timeout",
+            })
+            lobby.delete()
+
+            return Response({"error": "Время хода истекло"}, status=403)
+
+        # ── Обычный ход ───────────────────────────────────────────────────────
         board = lobby.map
         if board[row][col] is not None:
             return Response({"error": "Ячейка уже занята"}, status=400)
@@ -346,30 +384,30 @@ class MakeTurnView(APIView):
         next_turn_user_id = other_id if not game_over else None
         group_name = f"tictactoe_lobby_{lobby_id}"
         _broadcast_group(group_name, {
-            "type": "turn_made",
-            "row": row,
-            "col": col,
-            "map": board,
+            "type":             "turn_made",
+            "row":              row,
+            "col":              col,
+            "map":              board,
             "next_turn_user_id": next_turn_user_id,
-            "game_over": game_over,
-            "winner": winner,
-            "timestamp": timestamp,
+            "game_over":        game_over,
+            "winner":           winner,
+            "timestamp":        timestamp,
         })
 
         if game_over:
             _broadcast_group(group_name, {
-                "type": "game_ended",
+                "type":   "game_ended",
                 "winner": winner,
-                "map": board,
+                "map":    board,
             })
             lobby.delete()
 
         return Response({
-            "status": "ok",
-            "map": board,
+            "status":    "ok",
+            "map":       board,
             "timestamp": timestamp,
             "game_over": game_over,
-            "winner": winner,
+            "winner":    winner,
         })
 
 

@@ -1,15 +1,10 @@
 """
 seabattle_views.py — HTTP-эндпоинты для морского боя.
-
-Флоу:
-  1. POST /seabattle/game_start/       — найти/создать лобби
-  2. POST /seabattle/place_ships/      — расставить корабли
-  3. POST /seabattle/shoot/            — выстрел
-  4. DELETE /seabattle/delete_lobby/   — удалить лобби (только владелец без противника)
-  5. GET  /seabattle/me/               — данные текущего пользователя
 """
 import time
+from datetime import timedelta
 from django.db.models import Q
+from django.utils import timezone
 from rest_framework import permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -19,6 +14,8 @@ from asgiref.sync import async_to_sync
 from mainapp.models import User, SeaBattleLobby, SEA_SIZE, SHIP_LENGTHS
 
 channel_layer = get_channel_layer()
+
+TURN_TIMEOUT = 120  # секунд
 
 
 def _broadcast(group: str, message: dict):
@@ -34,16 +31,14 @@ def _empty():
 
 
 def _validate_ships(ships: list) -> bool:
-    """Проверить что расстановка корректна — ровно нужные корабли без касаний."""
+    """Проверить что расстановка корректна."""
     if len(ships) != SEA_SIZE or any(len(r) != SEA_SIZE for r in ships):
         return False
-    # Считаем длины кораблей (связные группы 1)
     visited = [[False] * SEA_SIZE for _ in range(SEA_SIZE)]
     found = []
     for r in range(SEA_SIZE):
         for c in range(SEA_SIZE):
             if ships[r][c] == 1 and not visited[r][c]:
-                # BFS
                 cells = []
                 queue = [(r, c)]
                 while queue:
@@ -60,7 +55,6 @@ def _validate_ships(ships: list) -> bool:
     expected = sorted(SHIP_LENGTHS, reverse=True)
     if found != expected:
         return False
-    # Проверка касаний по диагонали
     for r in range(SEA_SIZE):
         for c in range(SEA_SIZE):
             if ships[r][c] == 1:
@@ -70,14 +64,12 @@ def _validate_ships(ships: list) -> bool:
                         nr, nc = r+dr, c+dc
                         if 0 <= nr < SEA_SIZE and 0 <= nc < SEA_SIZE:
                             if ships[nr][nc] == 1:
-                                # Смежные по горизонтали/вертикали — ок, диагональные — нет
                                 if dr != 0 and dc != 0:
                                     return False
     return True
 
 
 def _check_win(ships: list, shots: list) -> bool:
-    """Все клетки с кораблями подбиты."""
     for r in range(SEA_SIZE):
         for c in range(SEA_SIZE):
             if ships[r][c] == 1 and shots[r][c] != 2:
@@ -94,8 +86,7 @@ def _user_info(user_id: int) -> dict | None:
 
 
 def _lobby_state(lobby: SeaBattleLobby, user_id: int) -> dict:
-    """Сформировать состояние лобби для конкретного пользователя."""
-    is_owner = lobby.lobby_owner == user_id
+    is_owner   = lobby.lobby_owner == user_id
     my_ships   = lobby.owner_ships    if is_owner else lobby.opponent_ships
     my_shots   = lobby.owner_shots    if is_owner else lobby.opponent_shots
     enemy_shots = lobby.opponent_shots if is_owner else lobby.owner_shots
@@ -103,7 +94,6 @@ def _lobby_state(lobby: SeaBattleLobby, user_id: int) -> dict:
     enemy_ready = lobby.opponent_ready if is_owner else lobby.owner_ready
     other_id   = lobby.opponent       if is_owner else lobby.lobby_owner
 
-    # Поле противника — корабли скрыты (только выстрелы)
     enemy_view = [[None] * SEA_SIZE for _ in range(SEA_SIZE)]
     for r in range(SEA_SIZE):
         for c in range(SEA_SIZE):
@@ -114,8 +104,8 @@ def _lobby_state(lobby: SeaBattleLobby, user_id: int) -> dict:
         "lobby_id":     lobby.id,
         "is_owner":     is_owner,
         "my_ships":     my_ships,
-        "my_shots":     enemy_shots,   # выстрелы противника по моему полю
-        "enemy_view":   enemy_view,    # моё поле выстрелов по противнику
+        "my_shots":     enemy_shots,
+        "enemy_view":   enemy_view,
         "my_ready":     my_ready,
         "enemy_ready":  enemy_ready,
         "is_your_turn": lobby.turn == user_id,
@@ -127,7 +117,7 @@ def _lobby_state(lobby: SeaBattleLobby, user_id: int) -> dict:
 # ─── Views ────────────────────────────────────────────────────────────────────
 
 class SBGameStartView(APIView):
-    """POST /seabattle/game_start/ — найти открытое лобби или создать новое."""
+    """POST /seabattle/game_start/"""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -140,9 +130,14 @@ class SBGameStartView(APIView):
             winner__isnull=True,
         ).first()
         if existing:
+            turn_deadline_ts = None
+            if existing.turn_deadline:
+                turn_deadline_ts = int(existing.turn_deadline.timestamp())
+
             return Response({
                 "status": "rejoined",
                 **_lobby_state(existing, uid),
+                "turn_deadline": turn_deadline_ts,
             })
 
         # Открытое лобби без противника
@@ -155,7 +150,6 @@ class SBGameStartView(APIView):
             open_lobby.opponent = uid
             open_lobby.save()
 
-            # Уведомить владельца
             _broadcast(_group(open_lobby.id), {
                 "type": "sb_opponent_joined",
                 "opponent": _user_info(uid),
@@ -164,6 +158,7 @@ class SBGameStartView(APIView):
             return Response({
                 "status": "joined",
                 **_lobby_state(open_lobby, uid),
+                "turn_deadline": None,
             })
 
         # Создать новое лобби
@@ -171,15 +166,12 @@ class SBGameStartView(APIView):
         return Response({
             "status": "created",
             **_lobby_state(lobby, uid),
+            "turn_deadline": None,
         }, status=status.HTTP_201_CREATED)
 
 
 class SBPlaceShipsView(APIView):
-    """
-    POST /seabattle/place_ships/
-    Body: { "lobby_id": int, "ships": [[...8x8...]] }
-    Расставить корабли. После того как оба готовы — игра начинается.
-    """
+    """POST /seabattle/place_ships/"""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -207,32 +199,31 @@ class SBPlaceShipsView(APIView):
         else:
             return Response({"error": "Вы не участник этого лобби"}, status=403)
 
-        # Если оба готовы — начинаем, первый ход у владельца
-        if lobby.owner_ready and lobby.opponent_ready and lobby.turn is None:
+        both_ready = lobby.owner_ready and lobby.opponent_ready
+
+        # Оба готовы — начинаем, первый ход у владельца, ставим дедлайн
+        if both_ready and lobby.turn is None:
             lobby.turn = lobby.lobby_owner
+            lobby.turn_deadline = timezone.now() + timedelta(seconds=TURN_TIMEOUT)
 
         lobby.save()
 
-        # Уведомить противника что мы готовы
         _broadcast(_group(lobby_id), {
-            "type": "sb_player_ready",
-            "user_id": uid,
-            "both_ready": lobby.owner_ready and lobby.opponent_ready,
+            "type":       "sb_player_ready",
+            "user_id":    uid,
+            "both_ready": both_ready,
             "first_turn": lobby.turn,
         })
 
         return Response({
-            "status": "ok",
-            "both_ready": lobby.owner_ready and lobby.opponent_ready,
+            "status":       "ok",
+            "both_ready":   both_ready,
             "is_your_turn": lobby.turn == uid,
         })
 
 
 class SBShootView(APIView):
-    """
-    POST /seabattle/shoot/
-    Body: { "lobby_id": int, "row": int, "col": int }
-    """
+    """POST /seabattle/shoot/"""
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
@@ -252,13 +243,29 @@ class SBShootView(APIView):
         if lobby.turn != uid:
             return Response({"error": "Сейчас не ваш ход"}, status=403)
 
-        if not (lobby.owner_ready and lobby.opponent_ready):
+        if not lobby.both_ready:
             return Response({"error": "Оба игрока должны расставить корабли"}, status=400)
 
-        is_owner = lobby.lobby_owner == uid
-        my_shots   = lobby.owner_shots    if is_owner else lobby.opponent_shots
+        # ── Проверка дедлайна ─────────────────────────────────────────────
+        if lobby.turn_deadline and timezone.now() > lobby.turn_deadline:
+            winner_id = lobby.opponent if lobby.lobby_owner == uid else lobby.lobby_owner
+            lobby.winner        = winner_id
+            lobby.turn          = None
+            lobby.turn_deadline = None
+            lobby.save()
+
+            _broadcast(_group(lobby_id), {
+                "type":   "sb_game_ended",
+                "winner": winner_id,
+                "reason": "timeout",
+            })
+            lobby.delete()
+            return Response({"error": "Время хода истекло"}, status=403)
+
+        is_owner    = lobby.lobby_owner == uid
+        my_shots    = lobby.owner_shots    if is_owner else lobby.opponent_shots
         enemy_ships = lobby.opponent_ships if is_owner else lobby.owner_ships
-        other_id   = lobby.opponent       if is_owner else lobby.lobby_owner
+        other_id    = lobby.opponent       if is_owner else lobby.lobby_owner
 
         if my_shots[row][col] is not None:
             return Response({"error": "Уже стреляли сюда"}, status=400)
@@ -271,7 +278,6 @@ class SBShootView(APIView):
         else:
             lobby.opponent_shots = my_shots
 
-        # Проверка победы
         game_over = False
         winner    = None
         if hit and _check_win(enemy_ships, my_shots):
@@ -279,34 +285,38 @@ class SBShootView(APIView):
             winner       = uid
             lobby.winner = uid
             lobby.turn   = None
+            lobby.turn_deadline = None
         elif not hit:
-            # Промах — ход переходит
-            lobby.turn = other_id
+            # Промах — ход переходит, обновляем дедлайн
+            lobby.turn          = other_id
+            lobby.turn_deadline = timezone.now() + timedelta(seconds=TURN_TIMEOUT)
 
         lobby.save()
 
         timestamp = int(time.time())
 
-        # Уведомить всех через WS
         _broadcast(_group(lobby_id), {
-            "type":      "sb_shot",
+            "type":       "sb_shot",
             "shooter_id": uid,
-            "row":       row,
-            "col":       col,
-            "hit":       hit,
-            "game_over": game_over,
-            "winner":    winner,
-            "next_turn": lobby.turn,
-            "timestamp": timestamp,
+            "row":        row,
+            "col":        col,
+            "hit":        hit,
+            "game_over":  game_over,
+            "winner":     winner,
+            "next_turn":  lobby.turn,
+            "timestamp":  timestamp,
         })
 
+        if game_over:
+            lobby.delete()
+
         return Response({
-            "status":    "ok",
-            "hit":       hit,
-            "game_over": game_over,
-            "winner":    winner,
+            "status":       "ok",
+            "hit":          hit,
+            "game_over":    game_over,
+            "winner":       winner,
             "is_your_turn": lobby.turn == uid,
-            "timestamp": timestamp,
+            "timestamp":    timestamp,
         })
 
 
@@ -328,12 +338,38 @@ class SBDeleteLobbyView(APIView):
             return Response({"error": "Только владелец может удалить лобби"}, status=403)
 
         if lobby.opponent:
-            _broadcast(_group(lobby_id), {
-                "type": "sb_lobby_deleted",
-            })
+            _broadcast(_group(lobby_id), {"type": "sb_lobby_deleted"})
 
         lobby.delete()
         return Response({"status": "deleted"})
+
+
+class SBLeaveLobbyView(APIView):
+    """
+    POST /seabattle/leave_lobby/
+    Body: { "lobby_id": int }
+
+    Доступно любому участнику. При выходе уведомляет второго игрока
+    через WS и удаляет лобби.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        lobby_id = request.data.get("lobby_id")
+        if not lobby_id:
+            return Response({"error": "Необходим lobby_id"}, status=400)
+
+        try:
+            lobby = SeaBattleLobby.objects.get(id=lobby_id)
+        except SeaBattleLobby.DoesNotExist:
+            return Response({"status": "already_deleted"})
+
+        # Уведомляем второго игрока если он есть
+        if lobby.opponent:
+            _broadcast(_group(lobby_id), {"type": "sb_lobby_deleted"})
+
+        lobby.delete()
+        return Response({"status": "ok"})
 
 
 class SBGetCurrentUserView(APIView):

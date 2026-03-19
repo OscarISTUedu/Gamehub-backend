@@ -9,7 +9,8 @@ from mainapp.views import (
     GameStartView, MakeTurnView, GetOpponentInfoView, GetCurrentUserView, DeleteLobbyView,
 )
 from mainapp.seabattle_views import (
-    SBGameStartView, SBPlaceShipsView, SBShootView, SBDeleteLobbyView, SBGetCurrentUserView,
+    SBGameStartView, SBPlaceShipsView, SBShootView,
+    SBDeleteLobbyView, SBLeaveLobbyView, SBGetCurrentUserView,
 )
 
 urlpatterns = [
@@ -39,5 +40,6 @@ urlpatterns = [
     path('seabattle/place_ships/',  SBPlaceShipsView.as_view(),  name='sb_place_ships'),
     path('seabattle/shoot/',        SBShootView.as_view(),       name='sb_shoot'),
     path('seabattle/delete_lobby/', SBDeleteLobbyView.as_view(), name='sb_delete_lobby'),
+    path('seabattle/leave_lobby/',  SBLeaveLobbyView.as_view(),  name='sb_leave_lobby'),
     path('seabattle/me/',           SBGetCurrentUserView.as_view(), name='sb_me'),
 ]

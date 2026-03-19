@@ -45,13 +45,10 @@ class GameLobby(models.Model):
     winner = models.IntegerField(null=True, blank=True)
 
     # Настройки поля
-    board_size = models.IntegerField(default=3)   # Размер поля (3-10)
-    win_length = models.IntegerField(default=3)   # Сколько в ряд для победы
+    board_size = models.IntegerField(default=3)
+    win_length = models.IntegerField(default=3)
 
     # Дедлайн текущего хода (автопроигрыш по таймауту)
-    turn_deadline = models.DateTimeField(null=True, blank=True)
-
-    # Таймаут хода (null = игра не началась или закончена)
     turn_deadline = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -86,9 +83,6 @@ class SeaBattleLobby(models.Model):
       0     — промах (выстрел по пустой клетке)
       1     — корабль (не подбит)
       2     — попадание (подбитая клетка корабля)
-
-    owner_ships / opponent_ships — расстановка кораблей (видна только владельцу).
-    owner_shots / opponent_shots — результаты выстрелов по чужому полю.
     """
     lobby_owner   = models.IntegerField()
     opponent      = models.IntegerField(null=True, blank=True)
@@ -98,22 +92,29 @@ class SeaBattleLobby(models.Model):
     opponent_ships = models.JSONField(default=list)
 
     # Выстрелы: 0 = промах, 2 = попадание, null = не стреляли
-    owner_shots    = models.JSONField(default=list)   # владелец стрелял сюда (по полю opponent)
-    opponent_shots = models.JSONField(default=list)   # opponent стрелял сюда (по полю owner)
+    owner_shots    = models.JSONField(default=list)
+    opponent_shots = models.JSONField(default=list)
 
     # Чья очередь (user_id)
     turn   = models.IntegerField(null=True, blank=True)
     winner = models.IntegerField(null=True, blank=True)
 
-    # Флаги готовности (корабли расставлены)
+    # Флаги готовности
     owner_ready    = models.BooleanField(default=False)
     opponent_ready = models.BooleanField(default=False)
+
+    # Дедлайн текущего хода (автопроигрыш по таймауту)
+    turn_deadline = models.DateTimeField(null=True, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'seabattlelobby'
+
+    @property
+    def both_ready(self):
+        return self.owner_ready and self.opponent_ready
 
     def empty_field(self):
         return [[None] * SEA_SIZE for _ in range(SEA_SIZE)]

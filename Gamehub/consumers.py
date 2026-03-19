@@ -26,13 +26,19 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
         lobby = await self._get_lobby()
         if lobby:
             is_your_turn = lobby.turn == self.user.id
+
+            turn_deadline_ts = None
+            if lobby.turn_deadline:
+                from django.utils import timezone
+                turn_deadline_ts = int(lobby.turn_deadline.timestamp())
+
             await self.send(text_data=json.dumps({
-                "type":        "lobby_state",
-                "lobby_id":    lobby.id,
-                "map":         lobby.map,
-                "is_your_turn": is_your_turn,
+                "type":          "lobby_state",
+                "lobby_id":      lobby.id,
+                "map":           lobby.map,
+                "is_your_turn":  is_your_turn,
+                "turn_deadline": turn_deadline_ts,
             }))
-            # Если игра идёт и сейчас мой ход — запускаем таймер
             if is_your_turn and lobby.opponent is not None:
                 await self._start_timeout(True)
 
@@ -89,7 +95,6 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
     # ── Таймаут ───────────────────────────────────────────────────────────────
 
     async def _start_timeout(self, is_my_turn: bool):
-        """Запустить таймер только если сейчас МОЙ ход."""
         if not is_my_turn:
             return
         self._timeout_task = asyncio.ensure_future(self._timeout_loop())
@@ -104,18 +109,16 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
         self._timeout_task = None
 
     async def _timeout_loop(self):
-        """Ждём TURN_TIMEOUT секунд. Если ход не был сделан — проигрыш."""
         await asyncio.sleep(TURN_TIMEOUT)
-        # Проверяем что лобби ещё существует и ход всё ещё за нами
         result = await self._forfeit_if_timeout()
         if result:
             lobby_id, winner_id, board = result
             group = f"tictactoe_lobby_{lobby_id}"
             await self.channel_layer.group_send(group, {
-                "type":      "game_ended",
-                "winner":    winner_id,
-                "map":       board,
-                "reason":    "timeout",
+                "type":   "game_ended",
+                "winner": winner_id,
+                "map":    board,
+                "reason": "timeout",
             })
 
     # ── DB ────────────────────────────────────────────────────────────────────
@@ -138,32 +141,24 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
 
     @database_sync_to_async
     def _forfeit_if_timeout(self):
-        """
-        Если ход всё ещё за текущим пользователем — засчитать ему поражение.
-        Возвращает (lobby_id, winner_id, board) или None.
-        """
         from django.utils import timezone
         try:
             lobby = GameLobby.objects.get(id=self.lobby_id)
         except GameLobby.DoesNotExist:
             return None
 
-        # Игра уже закончена
         if lobby.turn is None or lobby.winner is not None:
             return None
 
-        # Ход не за нами — таймер не должен был запуститься, но на всякий случай
         if lobby.turn != self.user.id:
             return None
 
-        # Проверяем дедлайн
         if lobby.turn_deadline and timezone.now() < lobby.turn_deadline:
             return None
 
-        # Засчитываем поражение текущему игроку
         winner_id = lobby.opponent if lobby.lobby_owner == self.user.id else lobby.lobby_owner
-        lobby.winner   = winner_id
-        lobby.turn     = None
+        lobby.winner        = winner_id
+        lobby.turn          = None
         lobby.turn_deadline = None
         lobby.save()
         lobby.delete()

@@ -8,7 +8,7 @@ from mainapp import views
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 from mainapp.views import CookieTokenRefreshView, \
-    GetMyAchievementsView, GetAllAchievementsView, UserTextViews, UserAvatarView, GameListView
+    GetMyAchievementsView, GetAllAchievementsView, UserTextViews, UserAvatarView, GameListView, UserAchievementsView
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
@@ -32,4 +32,6 @@ urlpatterns = [
     # path('api/achievement/get_all/', GetAllAchievementsView.as_view(), name='get_all_achievements'),
     # Games
     path('api/game/all/', GameListView.as_view(), name='get_all_games'),
+    # Leader Table
+    path('api/leader_table/', UserAchievementsView.as_view(), name='get_leader_table'),
 ]

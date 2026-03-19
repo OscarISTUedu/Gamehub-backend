@@ -234,3 +234,20 @@ class UserAvatarView(mixins.UpdateModelMixin, generics.GenericAPIView):
 class GameListView(generics.ListAPIView):
     queryset = Game.objects.all()
     serializer_class = GameSerializer
+
+
+class UserAchievementsView(APIView):
+    def get(self, request):
+        users_data = [
+            {"#": 1, "nickname": "jon", "total_achievs": 10, "achieve_%": 25},
+            {"#": 2, "nickname": "alice", "total_achievs": 15, "achieve_%": 60},
+            {"#": 3, "nickname": "bob", "total_achievs": 8, "achieve_%": 40},
+            {"#": 4, "nickname": "charlie", "total_achievs": 20, "achieve_%": 85},
+            {"#": 5, "nickname": "diana", "total_achievs": 12, "achieve_%": 55},
+            {"#": 6, "nickname": "eve", "total_achievs": 18, "achieve_%": 70},
+            {"#": 7, "nickname": "frank", "total_achievs": 5, "achieve_%": 15},
+            {"#": 8, "nickname": "grace", "total_achievs": 22, "achieve_%": 95},
+            {"#": 9, "nickname": "henry", "total_achievs": 14, "achieve_%": 45},
+            {"#": 10, "nickname": "isabella", "total_achievs": 9, "achieve_%": 30}
+        ]
+        return Response(users_data, status=status.HTTP_200_OK)

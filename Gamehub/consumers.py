@@ -2,7 +2,7 @@ import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
-from mainapp.models import GameLobby
+from mainapp.models import GameLobby, User
 from mainapp.views import _broadcast_group
 
 TURN_TIMEOUT = 120  # секунд
@@ -90,6 +90,7 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             "message": "player leaved",
             "type": "opponent_disconnected",
+            "user_email":event.get("user_email"),
         }))
 
     # ── Таймаут ───────────────────────────────────────────────────────────────
@@ -138,7 +139,7 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
         try:
             lobby = GameLobby.objects.get(id=self.lobby_id)
             group_name = f"tictactoe_lobby_{lobby.id}"
-            _broadcast_group(group_name, {"type": "opponent_disconnected"})
+            _broadcast_group(group_name, {"type": "opponent_disconnected", "user_email": User.objects.get(id=user_id).email })
             lobby.delete()
         except GameLobby.DoesNotExist:
             pass

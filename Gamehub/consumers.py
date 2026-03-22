@@ -89,6 +89,7 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
     async def opponent_disconnected(self, event):
         await self.send(text_data=json.dumps({
             "message": "player leaved",
+            "type": "opponent_disconnected",
         }))
 
     # ── Таймаут ───────────────────────────────────────────────────────────────

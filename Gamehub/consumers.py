@@ -39,7 +39,7 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
     async def disconnect(self, code):
         await self._cancel_timeout()
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
-        await self._delete_lobby_if_empty(self.user.id)
+        await self._delete_lobby(self.user.id)
 
     async def receive(self, text_data=None, bytes_data=None):
         pass
@@ -128,10 +128,10 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def _delete_lobby_if_empty(self, user_id):
+    def _delete_lobby(self, user_id):
         try:
             lobby = GameLobby.objects.get(id=self.lobby_id)
-            if lobby.lobby_owner == user_id and lobby.opponent is None:
+            if lobby.lobby_owner == user_id:
                 lobby.delete()
         except GameLobby.DoesNotExist:
             pass

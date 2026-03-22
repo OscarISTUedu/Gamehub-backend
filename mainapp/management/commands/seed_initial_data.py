@@ -56,7 +56,6 @@ class Command(BaseCommand):
             game.picture = image_relative_path
             game.save()
             games[game_data["name"]] = game
-
         for game_name, achievements in achievements_data.items():
             if game_name in games:
                 game = games[game_name]

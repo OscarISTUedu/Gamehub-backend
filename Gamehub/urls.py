@@ -7,7 +7,8 @@ from mainapp.seabattle_views import (
     SBGameStartView, SBPlaceShipsView, SBShootView, SBDeleteLobbyView, SBGetCurrentUserView,
 )
 from mainapp.views import (CookieTokenRefreshView, GetMyAchievementsView, UserTextViews, UserAvatarView,
-                           GameStartView,MakeTurnView,GetCurrentUserView,GetOpponentInfoView,DeleteLobbyView)
+                           GameStartView, MakeTurnView, GetCurrentUserView, GetOpponentInfoView, DeleteLobbyView,
+                           GameListView, UserAchievementsView)
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
@@ -27,6 +28,10 @@ urlpatterns = [
     path('api/me/all/', UserTextViews.as_view(), name='my_user'),
     path('api/me/avatar/', UserAvatarView.as_view(), name='my_avatar'),
     path('api/info/me/achievements/', GetMyAchievementsView.as_view(), name='get_my_achievements'),
+    # Games
+    path('api/game/all/', GameListView.as_view(), name='get_all_games'),
+    # Leader Table
+    path('api/leader_table/', UserAchievementsView.as_view(), name='get_leader_table'),
     # ── TicTacToe ──────────────────────────────────────────────────────────
     path('tictactoe/game_start/', GameStartView.as_view(), name='tictactoe_game_start'),
     path('tictactoe/make_turn/', MakeTurnView.as_view(), name='tictactoe_make_turn'),

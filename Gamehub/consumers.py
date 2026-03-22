@@ -3,7 +3,7 @@ import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from mainapp.models import GameLobby
-
+from mainapp.views import _broadcast_group
 
 TURN_TIMEOUT = 120  # секунд
 
@@ -86,6 +86,11 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
             "map":    event.get("map"),
         }))
 
+    async def player_leave(self, event):
+        await self.send(text_data=json.dumps({
+            "message": "player leaved",
+        }))
+
     # ── Таймаут ───────────────────────────────────────────────────────────────
 
     async def _start_timeout(self, is_my_turn: bool):
@@ -133,6 +138,8 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
             lobby = GameLobby.objects.get(id=self.lobby_id)
             if lobby.lobby_owner == user_id:
                 lobby.delete()
+                group_name = "player_leave"
+                _broadcast_group(group_name, {})
         except GameLobby.DoesNotExist:
             pass
 

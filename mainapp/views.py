@@ -558,17 +558,12 @@ class GetCurrentUserView(APIView):
 
 class DeleteLobbyView(APIView):
     """
-    DELETE /tictactoe/delete_lobby/
+    DELETE /tictactoe/delete_lobby/<int:lobby_id>/
     Удалить своё лобби. Только владелец может удалить лобби.
-    Body: { "lobby_id": int }
     """
-    permission_classes = [permissions.IsAuthenticated]
-
-    def delete(self, request):
-        lobby_id = request.data.get("lobby_id")
+    def delete(self, request, lobby_id):
         if not lobby_id:
             return Response({"error": "Необходим lobby_id"}, status=400)
-
         try:
             lobby = GameLobby.objects.get(id=lobby_id)
         except GameLobby.DoesNotExist:
@@ -576,7 +571,6 @@ class DeleteLobbyView(APIView):
 
         if lobby.lobby_owner != request.user.id:
             return Response({"error": "Только владелец может удалить лобби"}, status=403)
-
         # Уведомить противника если он есть
         if lobby.opponent:
             group_name = f"tictactoe_lobby_{lobby_id}"
@@ -585,6 +579,5 @@ class DeleteLobbyView(APIView):
                 "winner": None,
                 "map": lobby.map,
             })
-
         lobby.delete()
         return Response({"status": "deleted"})

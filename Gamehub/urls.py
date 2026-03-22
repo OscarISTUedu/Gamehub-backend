@@ -33,17 +33,17 @@ urlpatterns = [
     # Leader Table
     path('api/leader_table/', UserAchievementsView.as_view(), name='get_leader_table'),
     # ── TicTacToe ──────────────────────────────────────────────────────────
-    path('tictactoe/game_start/', GameStartView.as_view(), name='tictactoe_game_start'),
-    path('tictactoe/make_turn/', MakeTurnView.as_view(), name='tictactoe_make_turn'),
-    path('tictactoe/me/', GetCurrentUserView.as_view(), name='tictactoe_me'),
-    path('tictactoe/opponent_info/', GetOpponentInfoView.as_view(), name='tictactoe_opponent_info'),
-    path('tictactoe/delete_lobby/', DeleteLobbyView.as_view(), name='tictactoe_delete_lobby'),
+    path('api/tictactoe/game_start/', GameStartView.as_view(), name='tictactoe_game_start'),
+    path('api/tictactoe/make_turn/', MakeTurnView.as_view(), name='tictactoe_make_turn'),
+    path('api/tictactoe/me/', GetCurrentUserView.as_view(), name='tictactoe_me'),
+    path('api/tictactoe/opponent_info/', GetOpponentInfoView.as_view(), name='tictactoe_opponent_info'),
+    path('api/tictactoe/delete_lobby/<int:lobby_id>/', DeleteLobbyView.as_view(), name='delete_lobby'),
 
     # ── SeaBattle ──────────────────────────────────────────────────────────
-    path('seabattle/game_start/', SBGameStartView.as_view(), name='sb_game_start'),
-    path('seabattle/place_ships/', SBPlaceShipsView.as_view(), name='sb_place_ships'),
-    path('seabattle/shoot/', SBShootView.as_view(), name='sb_shoot'),
-    path('seabattle/delete_lobby/', SBDeleteLobbyView.as_view(), name='sb_delete_lobby'),
-    path('seabattle/me/', SBGetCurrentUserView.as_view(), name='sb_me'),
+    path('api/seabattle/game_start/', SBGameStartView.as_view(), name='sb_game_start'),
+    path('api/seabattle/place_ships/', SBPlaceShipsView.as_view(), name='sb_place_ships'),
+    path('api/seabattle/shoot/', SBShootView.as_view(), name='sb_shoot'),
+    path('api/seabattle/delete_lobby/', SBDeleteLobbyView.as_view(), name='sb_delete_lobby'),
+    path('api/seabattle/me/', SBGetCurrentUserView.as_view(), name='sb_me'),
 
 ]

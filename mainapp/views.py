@@ -238,50 +238,64 @@ class GameListView(generics.ListAPIView):
 
 class UserAchievementsView(APIView):
     def get(self, request):
-        users = User.objects.all()
-        users_data = []
-        for user in users:
-            user_achievements = user.achievements if user.achievements else []
-            total_achievs = len(user_achievements)
-            if total_achievs > 0:
-                achievements = Achievement.objects.filter(id__in=user_achievements)
-                game_stats = {}
-                for achievement in achievements:
-                    if achievement.game_id not in game_stats:
-                        game_stats[achievement.game_id] = {
-                            'achieved': 0,
-                            'total': Achievement.objects.filter(game_id=achievement.game_id).count()
-                        }
-                    game_stats[achievement.game_id]['achieved'] += 1
-                if game_stats:
-                    percentages = [
-                        (stats['achieved'] / stats['total'] * 100)
-                        for stats in game_stats.values()
-                        if stats['total'] > 0
-                    ]
-                    achieve_percent = round(sum(percentages) / len(percentages), 2) if percentages else 0
-                else:
-                    achieve_percent = 0
-            else:
-                achieve_percent = 0
-
-            users_data.append({
-                "nickname": user.username,
-                "total_achievs": total_achievs,
-                "achieve_%": achieve_percent
-            })
-        # Сортируем пользователей:
-        # 1. По total_achievs (по убыванию)
-        # 2. При равенстве - по achieve_% (по убыванию)
-        sorted_users = sorted(
-            users_data,
-            key=lambda x: (-x['total_achievs'], -x['achieve_%'])
-        )
-        result = []
-        for idx, user in enumerate(sorted_users[:10], start=1):
-            user_with_number = {
-                "#": idx,
-                **user
-            }
-            result.append(user_with_number)
-        return Response(result, status=status.HTTP_200_OK)
+        users_data = [
+            {"#": 1, "nickname": "jon", "total_achievs": 10, "achieve_%": 25},
+            {"#": 2, "nickname": "alice", "total_achievs": 15, "achieve_%": 60},
+            {"#": 3, "nickname": "bob", "total_achievs": 8, "achieve_%": 40},
+            {"#": 4, "nickname": "charlie", "total_achievs": 20, "achieve_%": 85},
+            {"#": 5, "nickname": "diana", "total_achievs": 12, "achieve_%": 55},
+            {"#": 6, "nickname": "eve", "total_achievs": 18, "achieve_%": 70},
+            {"#": 7, "nickname": "frank", "total_achievs": 5, "achieve_%": 15},
+            {"#": 8, "nickname": "grace", "total_achievs": 22, "achieve_%": 95},
+            {"#": 9, "nickname": "henry", "total_achievs": 14, "achieve_%": 45},
+            {"#": 10, "nickname": "isabella", "total_achievs": 9, "achieve_%": 30}
+        ]
+        return Response(users_data, status=status.HTTP_200_OK)
+    # def get(self, request):
+    #     users = User.objects.all()
+    #     users_data = []
+    #     for user in users:
+    #         user_achievements = user.achievements if user.achievements else []
+    #         total_achievs = len(user_achievements)
+    #         if total_achievs > 0:
+    #             achievements = Achievement.objects.filter(id__in=user_achievements)
+    #             game_stats = {}
+    #             for achievement in achievements:
+    #                 if achievement.game_id not in game_stats:
+    #                     game_stats[achievement.game_id] = {
+    #                         'achieved': 0,
+    #                         'total': Achievement.objects.filter(game_id=achievement.game_id).count()
+    #                     }
+    #                 game_stats[achievement.game_id]['achieved'] += 1
+    #             if game_stats:
+    #                 percentages = [
+    #                     (stats['achieved'] / stats['total'] * 100)
+    #                     for stats in game_stats.values()
+    #                     if stats['total'] > 0
+    #                 ]
+    #                 achieve_percent = round(sum(percentages) / len(percentages), 2) if percentages else 0
+    #             else:
+    #                 achieve_percent = 0
+    #         else:
+    #             achieve_percent = 0
+    #
+    #         users_data.append({
+    #             "nickname": user.username,
+    #             "total_achievs": total_achievs,
+    #             "achieve_%": achieve_percent
+    #         })
+    #     # Сортируем пользователей:
+    #     # 1. По total_achievs (по убыванию)
+    #     # 2. При равенстве - по achieve_% (по убыванию)
+    #     sorted_users = sorted(
+    #         users_data,
+    #         key=lambda x: (-x['total_achievs'], -x['achieve_%'])
+    #     )
+    #     result = []
+    #     for idx, user in enumerate(sorted_users[:10], start=1):
+    #         user_with_number = {
+    #             "#": idx,
+    #             **user
+    #         }
+    #         result.append(user_with_number)
+    #     return Response(result, status=status.HTTP_200_OK)

@@ -61,21 +61,10 @@ class Command(BaseCommand):
             if game_name in games:
                 game = games[game_name]
                 for ach_data in achievements:
-                    ach_image_filename = f"{ach_data['name']}.png"
-                    ach_image_relative_path = os.path.join(
-                        'static/img/achive_icons',
-                        game_name,
-                        ach_image_filename
-                    )
                     achievement, created = Achievement.objects.get_or_create(
                         name=ach_data["name"],
                         game_id=game.id,
                         defaults={
-                            "description": ach_data["description"],
-                            "picture": ach_image_relative_path  # Добавляем поле picture
+                            "description": ach_data["description"]
                         }
                     )
-                    if not created and achievement.picture != ach_image_relative_path:
-                        achievement.picture = ach_image_relative_path
-                        achievement.save()
-

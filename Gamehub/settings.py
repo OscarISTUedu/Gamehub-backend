@@ -27,7 +27,6 @@ SECRET_KEY = os.getenv("SECRET_KEY", default="django-insecure-e-)6&=p*$m%t_!w&k9
 DEBUG = False
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '91.132.58.57']
-#ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -74,9 +73,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'Gamehub.wsgi.application'
+ASGI_APPLICATION = 'Gamehub.asgi.application'
 
-#CORS_ALLOW_ALL_ORIGINS = True
-#CORS_ALLOW_CREDENTIALS = True
+# Django Channels — Redis в качестве channel layer
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(os.getenv('REDIS_HOST', 'redis'), int(os.getenv('REDIS_PORT', 6379)))],
+        },
+    }
+}
+
+
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
@@ -187,3 +196,28 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# CORS
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+CORS_ALLOW_CREDENTIALS = True
+
+# Разрешить все заголовки и методы для CORS (включая Authorization)
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]

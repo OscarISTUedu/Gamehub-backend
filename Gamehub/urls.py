@@ -1,14 +1,13 @@
 from django.urls import path
-from rest_framework_simplejwt.views import (
-    TokenRefreshView,
-    TokenVerifyView
-)
+from rest_framework_simplejwt.views import TokenVerifyView
 from django.contrib import admin
 from mainapp import views
-from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
-
-from mainapp.views import CookieTokenRefreshView, \
-    GetMyAchievementsView, GetAllAchievementsView, UserTextViews, UserAvatarView, GameListView, UserAchievementsView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
+from mainapp.seabattle_views import (
+    SBGameStartView, SBPlaceShipsView, SBShootView, SBDeleteLobbyView, SBGetCurrentUserView,
+)
+from mainapp.views import (CookieTokenRefreshView, GetMyAchievementsView, UserTextViews, UserAvatarView,
+                           GameStartView,MakeTurnView,GetCurrentUserView,GetOpponentInfoView,DeleteLobbyView)
 
 urlpatterns = [
     path('api/admin/', admin.site.urls),
@@ -27,11 +26,19 @@ urlpatterns = [
     # Info
     path('api/me/all/', UserTextViews.as_view(), name='my_user'),
     path('api/me/avatar/', UserAvatarView.as_view(), name='my_avatar'),
-    path('api/me/achievements/', GetMyAchievementsView.as_view(), name='get_my_achievements'),
-    # Achievements
-    # path('api/achievement/get_all/', GetAllAchievementsView.as_view(), name='get_all_achievements'),
-    # Games
-    path('api/game/all/', GameListView.as_view(), name='get_all_games'),
-    # Leader Table
-    path('api/leader_table/', UserAchievementsView.as_view(), name='get_leader_table'),
+    path('api/info/me/achievements/', GetMyAchievementsView.as_view(), name='get_my_achievements'),
+    # ── TicTacToe ──────────────────────────────────────────────────────────
+    path('tictactoe/game_start/', GameStartView.as_view(), name='tictactoe_game_start'),
+    path('tictactoe/make_turn/', MakeTurnView.as_view(), name='tictactoe_make_turn'),
+    path('tictactoe/me/', GetCurrentUserView.as_view(), name='tictactoe_me'),
+    path('tictactoe/opponent_info/', GetOpponentInfoView.as_view(), name='tictactoe_opponent_info'),
+    path('tictactoe/delete_lobby/', DeleteLobbyView.as_view(), name='tictactoe_delete_lobby'),
+
+    # ── SeaBattle ──────────────────────────────────────────────────────────
+    path('seabattle/game_start/', SBGameStartView.as_view(), name='sb_game_start'),
+    path('seabattle/place_ships/', SBPlaceShipsView.as_view(), name='sb_place_ships'),
+    path('seabattle/shoot/', SBShootView.as_view(), name='sb_shoot'),
+    path('seabattle/delete_lobby/', SBDeleteLobbyView.as_view(), name='sb_delete_lobby'),
+    path('seabattle/me/', SBGetCurrentUserView.as_view(), name='sb_me'),
+
 ]

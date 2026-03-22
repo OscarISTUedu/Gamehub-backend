@@ -139,7 +139,7 @@ class TicTacToeConsumer(AsyncWebsocketConsumer):
             if lobby.lobby_owner == user_id:
                 lobby.delete()
                 group_name = "player_leave"
-                _broadcast_group(group_name, {})
+                _broadcast_group(group_name, {"type": "opponent_disconnected"})
         except GameLobby.DoesNotExist:
             pass
 
